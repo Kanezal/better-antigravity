@@ -4,8 +4,9 @@
 
 **Community-driven fixes and improvements for [Antigravity IDE](https://antigravity.dev)**
 
+[![npm](https://img.shields.io/npm/v/better-antigravity)](https://www.npmjs.com/package/better-antigravity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/AkaNPC/better-antigravity/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Kanezal/better-antigravity/pulls)
 [![Antigravity](https://img.shields.io/badge/Antigravity-v1.107.0+-blue.svg)](https://antigravity.dev)
 
 *Antigravity is great. We just make it a little better.*
@@ -19,6 +20,16 @@
 A collection of **hotfixes and patches** for bugs in Antigravity IDE that haven't been officially resolved yet. Each fix is a standalone script you can apply and revert safely.
 
 > **Note:** These are unofficial community patches. Use at your own risk. All fixes create automatic backups and can be reverted with a single command.
+
+---
+
+## 🚀 Quick Start
+
+```bash
+npx better-antigravity auto-run
+```
+
+That's it. Restart Antigravity and your "Always Proceed" setting actually works now.
 
 ---
 
@@ -63,17 +74,20 @@ Our patcher adds the missing `useEffect`. It uses **regex pattern matching** to 
 
 ### Usage
 
+**Via npx (recommended):**
+
 ```bash
-# Make sure Node.js 16+ is installed
+npx better-antigravity auto-run            # apply fix
+npx better-antigravity auto-run --check    # check status
+npx better-antigravity auto-run --revert   # revert to original
+```
 
-# Apply the fix
+**Via clone:**
+
+```bash
+git clone https://github.com/Kanezal/better-antigravity.git
+cd better-antigravity
 node fixes/auto-run-fix/patch.js
-
-# Check if it's applied
-node fixes/auto-run-fix/patch.js --check
-
-# Revert to original
-node fixes/auto-run-fix/patch.js --revert
 ```
 
 ### Example Output
@@ -125,12 +139,13 @@ node fixes/auto-run-fix/patch.js --revert
 
 ```
 better-antigravity/
+├── cli.js              # npx entry point
+├── package.json        # npm package config
 ├── README.md
 ├── LICENSE
 └── fixes/
     └── auto-run-fix/
-        ├── patch.js        # The patcher script
-        └── README.md       # Detailed fix documentation
+        └── patch.js    # The patcher script
 ```
 
 ---

@@ -1,0 +1,38 @@
+{
+  "name": "better-antigravity",
+  "version": "0.1.0",
+  "description": "Community-driven fixes and improvements for Antigravity IDE",
+  "main": "fixes/auto-run-fix/patch.js",
+  "bin": {
+    "better-antigravity": "cli.js"
+  },
+  "scripts": {
+    "fix:auto-run": "node fixes/auto-run-fix/patch.js",
+    "fix:auto-run:check": "node fixes/auto-run-fix/patch.js --check",
+    "fix:auto-run:revert": "node fixes/auto-run-fix/patch.js --revert"
+  },
+  "keywords": [
+    "antigravity",
+    "antigravity-ide",
+    "google-antigravity",
+    "fix",
+    "patch",
+    "auto-run",
+    "terminal",
+    "always-proceed",
+    "community"
+  ],
+  "author": "Kanezal",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kanezal/better-antigravity"
+  },
+  "homepage": "https://github.com/Kanezal/better-antigravity#readme",
+  "bugs": {
+    "url": "https://github.com/Kanezal/better-antigravity/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
