@@ -1,11 +1,11 @@
 <div align="center">
 
-# ⚡ Better Antigravity
+# Better Antigravity
 
 **Community-driven fixes and improvements for [Antigravity IDE](https://antigravity.dev)**
 
 [![npm](https://img.shields.io/npm/v/better-antigravity)](https://www.npmjs.com/package/better-antigravity)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Kanezal/better-antigravity/pulls)
 [![Antigravity](https://img.shields.io/badge/Antigravity-v1.107.0+-blue.svg)](https://antigravity.dev)
 
@@ -15,7 +15,7 @@
 
 ---
 
-## 🤔 What is this?
+## What is this?
 
 A collection of **hotfixes and patches** for bugs in Antigravity IDE that haven't been officially resolved yet. Each fix is a standalone script you can apply and revert safely.
 
@@ -23,7 +23,7 @@ A collection of **hotfixes and patches** for bugs in Antigravity IDE that haven'
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 npx better-antigravity auto-run
@@ -33,15 +33,15 @@ That's it. Restart Antigravity and your "Always Proceed" setting actually works 
 
 ---
 
-## 📦 Available Fixes
+## Available Fixes
 
 | Fix | Description | Status |
 |-----|-------------|--------|
-| [**auto-run-fix**](#-auto-run-fix) | "Always Proceed" terminal policy doesn't auto-execute commands | 🟢 Working |
+| [**auto-run-fix**](#auto-run-fix) | "Always Proceed" terminal policy doesn't auto-execute commands | ✅ Working |
 
 ---
 
-## 🔧 Auto-Run Fix
+## Auto-Run Fix
 
 ### The Problem
 
@@ -121,11 +121,11 @@ node fixes/auto-run-fix/patch.js
 | Antigravity Version | Status |
 |---------------------|--------|
 | 1.107.0 | ✅ Tested |
-| Other versions | 🟡 Should work (dynamic pattern matching) |
+| Other versions | Should work (dynamic pattern matching) |
 
 ---
 
-## 🛡️ Safety
+## Safety
 
 - **Automatic backups** — original files are saved as `.bak` before patching
 - **One-command revert** — run with `--revert` to restore originals instantly
@@ -135,7 +135,7 @@ node fixes/auto-run-fix/patch.js
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 better-antigravity/
@@ -150,7 +150,7 @@ better-antigravity/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Found another Antigravity bug? Have a fix? PRs are welcome!
 
@@ -170,14 +170,15 @@ Found another Antigravity bug? Have a fix? PRs are welcome!
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
-This project is not affiliated with Google or the Antigravity team. These are community patches for known bugs. If Antigravity updates and the patches break, simply revert and re-apply (or wait for an updated patch).
+> [!WARNING]
+> This project is not affiliated with Google or the Antigravity team. These are community patches for known bugs. If Antigravity updates and the patches break, simply revert and re-apply (or wait for an updated patch).
 
 **Always report bugs officially** at [antigravity.google/support](https://antigravity.google/support) — community patches are temporary solutions, not replacements for official fixes.
 
 ---
 
-## 📜 License
+## License
 
-[MIT](LICENSE) — do whatever you want with it.
+[AGPL-3.0-or-later](LICENSE)
