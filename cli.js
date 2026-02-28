@@ -37,9 +37,13 @@ if (!fixName || fixName === '--help' || fixName === '-h') {
     }
     console.log('');
     console.log('  Usage:');
-    console.log('    npx better-antigravity <fix-name>           Apply fix');
-    console.log('    npx better-antigravity <fix-name> --check   Check status');
-    console.log('    npx better-antigravity <fix-name> --revert  Revert fix');
+    console.log('    npx better-antigravity <fix-name>                   Apply fix');
+    console.log('    npx better-antigravity <fix-name> --check           Check status');
+    console.log('    npx better-antigravity <fix-name> --revert          Revert fix');
+    console.log('    npx better-antigravity <fix-name> --path <dir>      Use custom install path');
+    console.log('');
+    console.log('  The tool auto-detects Antigravity in: CWD, PATH, Registry, default locations.');
+    console.log('  Use --path if auto-detection fails (e.g. custom install on another drive).');
     console.log('');
     process.exit(0);
 }

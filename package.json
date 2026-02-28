@@ -1,6 +1,6 @@
 {
   "name": "better-antigravity",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Community-driven fixes and improvements for Antigravity IDE",
   "main": "fixes/auto-run-fix/patch.js",
   "bin": {

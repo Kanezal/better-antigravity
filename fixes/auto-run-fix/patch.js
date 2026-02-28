@@ -22,7 +22,99 @@ const os = require('os');
 
 // ─── Installation Detection ─────────────────────────────────────────────────
 
+/**
+ * Validates that a candidate directory is a real Antigravity installation
+ * by checking for the workbench main JS file.
+ */
+function isAntigravityDir(dir) {
+    if (!dir) return false;
+    try {
+        const workbench = path.join(dir, 'resources', 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js');
+        return fs.existsSync(workbench);
+    } catch { return false; }
+}
+
+/**
+ * Checks if a directory looks like the Antigravity installation root
+ * (contains Antigravity.exe or antigravity binary).
+ */
+function looksLikeAntigravityRoot(dir) {
+    if (!dir) return false;
+    try {
+        const exe = process.platform === 'win32' ? 'Antigravity.exe' : 'antigravity';
+        return fs.existsSync(path.join(dir, exe));
+    } catch { return false; }
+}
+
+/**
+ * Tries to find Antigravity installation path from Windows Registry.
+ * InnoSetup writes uninstall info to HKCU or HKLM.
+ */
+function findFromRegistry() {
+    if (process.platform !== 'win32') return null;
+    try {
+        const { execSync } = require('child_process');
+        // InnoSetup typically writes to this key; try HKCU first, then HKLM
+        const regPaths = [
+            'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Antigravity_is1',
+            'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Antigravity_is1',
+            'HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Antigravity_is1',
+        ];
+        for (const regPath of regPaths) {
+            try {
+                const output = execSync(
+                    `reg query "${regPath}" /v InstallLocation`,
+                    { encoding: 'utf8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
+                );
+                const match = output.match(/InstallLocation\s+REG_SZ\s+(.+)/i);
+                if (match) {
+                    const dir = match[1].trim().replace(/\\$/, '');
+                    if (isAntigravityDir(dir)) return dir;
+                }
+            } catch { /* key not found, try next */ }
+        }
+    } catch { /* child_process failed */ }
+    return null;
+}
+
+/**
+ * Tries to find Antigravity by looking at PATH entries for the executable.
+ */
+function findFromPath() {
+    try {
+        const pathDirs = (process.env.PATH || '').split(path.delimiter);
+        const exe = process.platform === 'win32' ? 'Antigravity.exe' : 'antigravity';
+        for (const dir of pathDirs) {
+            if (!dir) continue;
+            if (fs.existsSync(path.join(dir, exe))) {
+                // The exe could be in the root or in a bin/ subdirectory
+                if (isAntigravityDir(dir)) return dir;
+                const parent = path.dirname(dir);
+                if (isAntigravityDir(parent)) return parent;
+            }
+        }
+    } catch { /* PATH parsing failed */ }
+    return null;
+}
+
 function findAntigravityPath() {
+    // 1. Check CWD and its ancestors (user may run from install dir or a subdir)
+    let dir = process.cwd();
+    const root = path.parse(dir).root;
+    while (dir && dir !== root) {
+        if (looksLikeAntigravityRoot(dir) && isAntigravityDir(dir)) return dir;
+        dir = path.dirname(dir);
+    }
+
+    // 2. Check PATH
+    const fromPath = findFromPath();
+    if (fromPath) return fromPath;
+
+    // 3. Check Windows Registry (InnoSetup uninstall keys)
+    const fromReg = findFromRegistry();
+    if (fromReg) return fromReg;
+
+    // 4. Hardcoded well-known locations
     const candidates = [];
     if (process.platform === 'win32') {
         candidates.push(
@@ -39,9 +131,9 @@ function findAntigravityPath() {
             path.join(os.homedir(), '.local', 'share', 'antigravity'));
     }
     for (const c of candidates) {
-        const f = path.join(c, 'resources', 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js');
-        if (fs.existsSync(f)) return c;
+        if (isAntigravityDir(c)) return c;
     }
+
     return null;
 }
 
@@ -244,14 +336,38 @@ function main() {
     const args = process.argv.slice(2);
     const action = args.includes('--revert') ? 'revert' : args.includes('--check') ? 'check' : 'apply';
 
+    // Parse --path flag
+    let explicitPath = null;
+    const pathIdx = args.indexOf('--path');
+    if (pathIdx !== -1 && args[pathIdx + 1]) {
+        explicitPath = path.resolve(args[pathIdx + 1]);
+    }
+
     console.log('');
     console.log('╔══════════════════════════════════════════════════╗');
     console.log('║  Antigravity "Always Proceed" Auto-Run Fix      ║');
     console.log('╚══════════════════════════════════════════════════╝');
 
-    const basePath = findAntigravityPath();
+    let basePath;
+    if (explicitPath) {
+        if (!isAntigravityDir(explicitPath)) {
+            console.log(`\n\u274C --path "${explicitPath}" does not look like an Antigravity installation.`);
+            console.log('   Expected to find: resources/app/out/vs/workbench/workbench.desktop.main.js');
+            process.exit(1);
+        }
+        basePath = explicitPath;
+    } else {
+        basePath = findAntigravityPath();
+    }
+
     if (!basePath) {
-        console.log('\n❌ Antigravity not found! Install it or run from its directory.');
+        console.log('\n\u274C Antigravity installation not found!');
+        console.log('');
+        console.log('   Try one of:');
+        console.log('     1. Run from the Antigravity install directory:');
+        console.log('        cd "C:\\Path\\To\\Antigravity" && npx better-antigravity auto-run');
+        console.log('     2. Specify the path explicitly:');
+        console.log('        npx better-antigravity auto-run --path "D:\\Antigravity"');
         process.exit(1);
     }
 

@@ -82,6 +82,18 @@ npx better-antigravity auto-run --check    # check status
 npx better-antigravity auto-run --revert   # revert to original
 ```
 
+**Custom install path** (if Antigravity is not in the default location):
+
+```bash
+# Option A: run from the Antigravity directory
+cd "D:\Antigravity" && npx better-antigravity auto-run
+
+# Option B: use --path flag
+npx better-antigravity auto-run --path "D:\Antigravity"
+```
+
+> The tool auto-detects Antigravity by scanning: current directory, PATH, Windows Registry, and default install locations. Use `--path` only if auto-detection fails.
+
 **Via clone:**
 
 ```bash
