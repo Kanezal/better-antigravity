@@ -208,6 +208,8 @@ export interface PatchResult {
     error?: string;
 }
 
+export let lastApplyResults: PatchResult[] | null = null;
+
 /**
  * Auto-apply the fix to all target files.
  *
@@ -218,7 +220,8 @@ export async function autoApply(): Promise<PatchResult[]> {
     if (!dir) return [];
 
     const files = getTargetFiles(dir);
-    return Promise.all(files.map(f => patchFile(f.path, f.label)));
+    lastApplyResults = await Promise.all(files.map(f => patchFile(f.path, f.label)));
+    return lastApplyResults;
 }
 
 /**
