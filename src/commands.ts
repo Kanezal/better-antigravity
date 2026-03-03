@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fsp from 'fs/promises';
 import { AntigravitySDK } from 'antigravity-sdk';
-import { getWorkbenchDir, getTargetFiles, isPatched, revertAll } from './auto-run';
+import { getWorkbenchDir, getTargetFiles, isPatched, revertAll, lastApplyResults } from './auto-run';
 
 /**
  * Show extension status in the output channel.
@@ -30,7 +30,16 @@ export async function status(sdk: AntigravitySDK | null, output: vscode.OutputCh
         const files = getTargetFiles(dir);
         for (const f of files) {
             const patched = await isPatched(f.path);
-            lines.push(`AutoRun: ${f.label} = ${patched ? 'fixed' : 'not fixed'}`);
+            let statusStr = patched ? 'fixed' : 'not fixed';
+
+            if (!patched && lastApplyResults) {
+                const recent = lastApplyResults.find(r => r.label === f.label);
+                if (recent && recent.status === 'pattern-not-found') {
+                    statusStr = 'not fixed (A full IDE restart is required to apply patches)';
+                }
+            }
+
+            lines.push(`AutoRun: ${f.label} = ${statusStr}`);
         }
     } else {
         lines.push('AutoRun: workbench directory not found');
