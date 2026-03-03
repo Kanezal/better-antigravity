@@ -33,10 +33,16 @@ export function getWorkbenchDir(): string | null {
  * Target files that need the auto-run patch.
  */
 export function getTargetFiles(workbenchDir: string): Array<{ path: string; label: string }> {
+    const outDir = path.resolve(workbenchDir, '../../../../');
+
     return [
+        // Antigravity 1.107- (Older structure)
         { path: path.join(workbenchDir, 'workbench.desktop.main.js'), label: 'workbench' },
         { path: path.join(workbenchDir, 'jetskiAgent.js'), label: 'jetskiAgent' },
-    ].filter(f => fs.existsSync(f.path));
+        // Antigravity 1.108+ (Newer structure)
+        { path: path.join(outDir, 'vs', 'workbench', 'workbench.desktop.main.js'), label: 'workbench' },
+        { path: path.join(outDir, 'jetskiAgent', 'main.js'), label: 'jetskiAgent' },
+    ].filter(f => fs.existsSync(f.path) && fs.statSync(f.path).size > 100000); // Only target the large bundles
 }
 
 /**
@@ -61,13 +67,13 @@ export async function isPatched(filePath: string): Promise<boolean> {
  */
 function analyzeFile(content: string): AnalysisResult | null {
     // Find onChange handler for terminalAutoExecutionPolicy
-    // Pattern: <callback>=<useCallback>((<arg>)=>{<setFn>(<arg>),<arg>===<ENUM>.EAGER&&<confirm>(true)},[...])
-    const onChangeRegex = /(\w+)=(\w+)\((\(\w+\))=>\{(\w+)\(\w+\),\w+===(\w+)\.EAGER&&(\w+)\(!0\)\},\[/g;
+    // Pattern: <callback>=<useCallback>((<arg>)=>{<setFn>(...),\w+===<ENUM>.EAGER&&<confirm>(!0)},[...])
+    const onChangeRegex = /(\w+)=(\w+)\((?:\w+|\(\w+\))=>\{.*?\w+===(\w+)\.EAGER&&(\w+)\(!0\)\},\[/g;
     const match = onChangeRegex.exec(content);
 
     if (!match) return null;
 
-    const [fullMatch, , , , , enumName, confirmFn] = match;
+    const [fullMatch, , , enumName, confirmFn] = match;
     const insertPos = match.index + fullMatch.length;
 
     // Extract context variables from surrounding code
