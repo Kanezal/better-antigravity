@@ -29,7 +29,9 @@ const os = require('os');
 function isAntigravityDir(dir) {
     if (!dir) return false;
     try {
-        const workbench = path.join(dir, 'resources', 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js');
+        // macOS uses 'Resources' (capital R), Windows/Linux use 'resources'
+        const res = process.platform === 'darwin' ? 'Resources' : 'resources';
+        const workbench = path.join(dir, res, 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js');
         return fs.existsSync(workbench);
     } catch { return false; }
 }
@@ -123,8 +125,8 @@ function findAntigravityPath() {
         );
     } else if (process.platform === 'darwin') {
         candidates.push(
-            '/Applications/Antigravity.app/Contents/Resources',
-            path.join(os.homedir(), 'Applications', 'Antigravity.app', 'Contents', 'Resources')
+            '/Applications/Antigravity.app/Contents',
+            path.join(os.homedir(), 'Applications', 'Antigravity.app', 'Contents')
         );
     } else {
         candidates.push('/usr/share/antigravity', '/opt/antigravity',
@@ -324,8 +326,9 @@ function checkFile(filePath, label) {
 
 function getVersion(basePath) {
     try {
-        const pkg = JSON.parse(fs.readFileSync(path.join(basePath, 'resources', 'app', 'package.json'), 'utf8'));
-        const product = JSON.parse(fs.readFileSync(path.join(basePath, 'resources', 'app', 'product.json'), 'utf8'));
+        const res = process.platform === 'darwin' ? 'Resources' : 'resources';
+        const pkg = JSON.parse(fs.readFileSync(path.join(basePath, res, 'app', 'package.json'), 'utf8'));
+        const product = JSON.parse(fs.readFileSync(path.join(basePath, res, 'app', 'product.json'), 'utf8'));
         return `${pkg.version} (IDE ${product.ideVersion})`;
     } catch { return 'unknown'; }
 }
@@ -375,9 +378,15 @@ function main() {
     console.log(`📦 Version: ${getVersion(basePath)}`);
     console.log('');
 
+    const res = process.platform === 'darwin' ? 'Resources' : 'resources';
     const files = [
-        { path: path.join(basePath, 'resources', 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js'), label: 'workbench' },
-        { path: path.join(basePath, 'resources', 'app', 'out', 'jetskiAgent', 'main.js'), label: 'jetskiAgent' },
+        { path: path.join(basePath, res, 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js'), label: 'workbench' },
+        // macOS: jetskiAgent lives under vs/code/electron-browser/workbench/
+        // Windows: jetskiAgent lives under jetskiAgent/
+        ...(process.platform === 'darwin'
+            ? [{ path: path.join(basePath, res, 'app', 'out', 'vs', 'code', 'electron-browser', 'workbench', 'jetskiAgent.js'), label: 'jetskiAgent' }]
+            : [{ path: path.join(basePath, res, 'app', 'out', 'jetskiAgent', 'main.js'), label: 'jetskiAgent' }]
+        ),
     ];
 
     switch (action) {

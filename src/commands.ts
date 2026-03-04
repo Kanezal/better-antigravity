@@ -58,12 +58,22 @@ export async function revertAutoRun(): Promise<void> {
 
     if (reverted > 0) {
         // Clear V8 Code Cache — stale cache after revert causes grey screen
-        const appData = process.env.APPDATA || '';
-        const cacheDirs = [
-            path.join(appData, 'Antigravity', 'CachedData'),
-            path.join(appData, 'Antigravity', 'GPUCache'),
-            path.join(appData, 'Antigravity', 'Code Cache'),
-        ];
+        const cacheDirs: string[] = [];
+        if (process.platform === 'darwin') {
+            const appSupport = path.join(process.env.HOME || '', 'Library', 'Application Support', 'Antigravity');
+            cacheDirs.push(
+                path.join(appSupport, 'CachedData'),
+                path.join(appSupport, 'GPUCache'),
+                path.join(appSupport, 'Code Cache'),
+            );
+        } else {
+            const appData = process.env.APPDATA || '';
+            cacheDirs.push(
+                path.join(appData, 'Antigravity', 'CachedData'),
+                path.join(appData, 'Antigravity', 'GPUCache'),
+                path.join(appData, 'Antigravity', 'Code Cache'),
+            );
+        }
         for (const d of cacheDirs) {
             try { await fsp.rm(d, { recursive: true, force: true }); } catch { /* may not exist */ }
         }

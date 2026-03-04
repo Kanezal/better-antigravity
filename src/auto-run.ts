@@ -12,30 +12,70 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
+import * as os from 'os';
 
 /** Marker comment to identify our patches */
 const PATCH_MARKER = '/*BA:autorun*/';
 
 /**
- * Resolve the Antigravity workbench directory.
+ * Resolve the Antigravity base installation directory.
+ *
+ * Returns the directory that contains the resources/app structure.
+ * On Windows this is e.g. LOCALAPPDATA/Programs/Antigravity,
+ * on macOS this is /Applications/Antigravity.app/Contents.
  */
 export function getWorkbenchDir(): string | null {
-    const appData = process.env.LOCALAPPDATA || '';
-    const dir = path.join(
-        appData,
-        'Programs', 'Antigravity', 'resources', 'app', 'out',
-        'vs', 'code', 'electron-browser', 'workbench',
-    );
-    return fs.existsSync(dir) ? dir : null;
+    const candidates: string[] = [];
+
+    if (process.platform === 'darwin') {
+        // macOS: standard .app bundle locations
+        candidates.push(
+            '/Applications/Antigravity.app/Contents',
+            path.join(os.homedir(), 'Applications', 'Antigravity.app', 'Contents'),
+        );
+    } else if (process.platform === 'win32') {
+        // Windows: standard install locations
+        candidates.push(
+            path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Antigravity'),
+        );
+    } else {
+        // Linux: common locations
+        candidates.push(
+            '/usr/share/antigravity',
+            '/opt/antigravity',
+            path.join(os.homedir(), '.local', 'share', 'antigravity'),
+        );
+    }
+
+    // The "resources" directory is capitalised on macOS ('Resources')
+    const resourcesDir = process.platform === 'darwin' ? 'Resources' : 'resources';
+
+    for (const base of candidates) {
+        const check = path.join(base, resourcesDir, 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js');
+        if (fs.existsSync(check)) return base;
+    }
+    return null;
 }
 
 /**
  * Target files that need the auto-run patch.
+ *
+ * On Windows both files live under a single workbench directory.
+ * On macOS they are in different subdirectories of the app bundle,
+ * so we resolve each target independently.
  */
-export function getTargetFiles(workbenchDir: string): Array<{ path: string; label: string }> {
+export function getTargetFiles(baseDir: string): Array<{ path: string; label: string }> {
+    const res = process.platform === 'darwin' ? 'Resources' : 'resources';
+    const appOut = path.join(baseDir, res, 'app', 'out');
+
     return [
-        { path: path.join(workbenchDir, 'workbench.desktop.main.js'), label: 'workbench' },
-        { path: path.join(workbenchDir, 'jetskiAgent.js'), label: 'jetskiAgent' },
+        { path: path.join(appOut, 'vs', 'workbench', 'workbench.desktop.main.js'), label: 'workbench' },
+        // macOS: jetskiAgent lives under vs/code/electron-browser/workbench/
+        // Windows: jetskiAgent lives under jetskiAgent/
+        ...(process.platform === 'darwin'
+            ? [{ path: path.join(appOut, 'vs', 'code', 'electron-browser', 'workbench', 'jetskiAgent.js'), label: 'jetskiAgent' }]
+            : [{ path: path.join(appOut, 'jetskiAgent', 'main.js'), label: 'jetskiAgent' }]
+        ),
     ].filter(f => fs.existsSync(f.path));
 }
 
