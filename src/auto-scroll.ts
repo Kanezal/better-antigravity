@@ -21,9 +21,9 @@ function getAntigravityPaths() {
     return {
         baseDir,
         productJsonPath: path.join(baseDir, 'product.json'),
-        workbenchHtmlPath: path.join(baseDir, 'out', 'vs', 'code', 'electron-sandbox', 'workbench', 'workbench.html'),
+        workbenchHtmlPath: path.join(baseDir, 'out', 'vs', 'code', 'electron-browser', 'workbench', 'workbench.html'),
         // Relative path identifier for checksums Dictionary
-        workbenchHtmlChecksumKey: 'vs/code/electron-sandbox/workbench/workbench.html'
+        workbenchHtmlChecksumKey: 'vs/code/electron-browser/workbench/workbench.html'
     };
 }
 
