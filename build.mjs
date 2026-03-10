@@ -15,10 +15,6 @@ const config = {
     target: 'es2020',
     sourcemap: true,
     minify: false,
-    // Resolve antigravity-sdk from monorepo sibling
-    alias: {
-        'antigravity-sdk': path.resolve('..', 'antigravity-sdk', 'dist', 'index.js'),
-    },
 };
 
 // Ensure dist/ exists

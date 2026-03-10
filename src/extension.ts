@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { AntigravitySDK } from 'antigravity-sdk';
 import { autoApply } from './auto-run';
 import { status, revertAutoRun } from './commands';
+import { applyAutoScrollPatch, removeAutoScrollPatch } from './auto-scroll';
 
 let sdk: AntigravitySDK | null = null;
 let output: vscode.OutputChannel;
@@ -28,7 +29,11 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('better-antigravity.status', () => status(sdk, output)),
         vscode.commands.registerCommand('better-antigravity.revertAutoRun', revertAutoRun),
+        vscode.commands.registerCommand('better-antigravity.removeAutoScrollPatch', removeAutoScrollPatch),
     );
+
+    // ── Auto-Scroll Patch ──────────────────────────────────────────────
+    applyAutoScrollPatch(context);
 
     // ── Auto-Run Fix (async, non-blocking, no prompt) ─────────────────
     autoApply().then(fixResults => {
