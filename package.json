@@ -50,6 +50,10 @@
       {
         "command": "better-antigravity.revertAutoRun",
         "title": "Better Antigravity: Revert Auto-Run Fix"
+      },
+      {
+        "command": "better-antigravity.removeAutoScrollPatch",
+        "title": "Better Antigravity: Revert Auto-Scroll Fix"
       }
     ]
   },
@@ -61,7 +65,10 @@
     "publish:ovsx": "node publish-ovsx.mjs",
     "fix:auto-run": "node fixes/auto-run-fix/patch.js",
     "fix:auto-run:check": "node fixes/auto-run-fix/patch.js --check",
-    "fix:auto-run:revert": "node fixes/auto-run-fix/patch.js --revert"
+    "fix:auto-run:revert": "node fixes/auto-run-fix/patch.js --revert",
+    "fix:auto-scroll": "node fixes/auto-scroll-fix/patch.js",
+    "fix:auto-scroll:check": "node fixes/auto-scroll-fix/patch.js --check",
+    "fix:auto-scroll:revert": "node fixes/auto-scroll-fix/patch.js --revert"
   },
   "repository": {
     "type": "git",

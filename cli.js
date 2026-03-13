@@ -16,6 +16,10 @@ const fixes = {
     'auto-run': {
         script: path.join(__dirname, 'fixes', 'auto-run-fix', 'patch.js'),
         description: '"Always Proceed" terminal policy doesn\'t auto-execute commands'
+    },
+    'auto-scroll': {
+        script: path.join(__dirname, 'fixes', 'auto-scroll-fix', 'patch.js'),
+        description: 'Chat window hangs when not scrolled to bottom during generation'
     }
 };
 

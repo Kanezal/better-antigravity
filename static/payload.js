@@ -5,8 +5,9 @@
  * the chat container AND all scrollable ancestor containers to scroll
  * to the bottom during AI generation.
  * 
- * Walks up the DOM from .antigravity-chat-scroll-area to discover every
- * scrollable parent, so both the inner and outer scrollbars stay pinned.
+ * Identifies the chat content area by structural pattern matching:
+ * looks for the conversation container by its layout classes and
+ * walks up the DOM to discover every scrollable ancestor.
  */
 (function() {
     console.log('[Better Antigravity] Auto-scroller payload initialized');
@@ -18,8 +19,30 @@
     let scrollTimeout = null;
     let scrollDebounce = null;
 
-    // The chat area class (defined in SPEC.md)
-    const CHAT_SELECTOR = '.antigravity-chat-scroll-area';
+    // ─── Structural Selectors ───────────────────────────────────────
+    // We match by structure, not by a single class name, so the fix
+    // survives Antigravity CSS refactors.  Priority order:
+    //   1. Known class combo from DOM inspection
+    //   2. Fallback: any deeply-nested scrollable container with
+    //      multiple child divs that have explicit heights (chat turns)
+    const CHAT_SELECTORS = [
+        '.relative.flex.flex-col.gap-y-3.px-4',     // current Antigravity DOM structure
+        '.antigravity-chat-scroll-area',              // SPEC.md legacy selector (keep as fallback)
+    ];
+
+    /**
+     * Try each selector in priority order, return the first match.
+     */
+    function findChatContainer() {
+        for (const sel of CHAT_SELECTORS) {
+            const el = document.querySelector(sel);
+            if (el) {
+                console.log('[Better Antigravity] Chat container found via:', sel);
+                return el;
+            }
+        }
+        return null;
+    }
 
     /**
      * Walk up the DOM from an element and collect all scrollable ancestors.
@@ -31,8 +54,12 @@
         let current = element.parentElement;
 
         while (current && current !== document.documentElement) {
-            // Check if this element is actually scrollable
-            if (current.scrollHeight > current.clientHeight + 1) {
+            const style = window.getComputedStyle(current);
+            const overflowY = style.overflowY;
+            const isScrollable = (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay')
+                && current.scrollHeight > current.clientHeight + 1;
+            
+            if (isScrollable) {
                 ancestors.push(current);
             }
             current = current.parentElement;
@@ -109,11 +136,44 @@
 
         // Discover all scrollable containers: chat container itself + scrollable ancestors
         const ancestors = findScrollableAncestors(chatContainer);
-        scrollableContainers = [chatContainer, ...ancestors];
+        
+        // Also check if the chat container itself is scrollable
+        const chatStyle = window.getComputedStyle(chatContainer);
+        const chatScrollable = (chatStyle.overflowY === 'auto' || chatStyle.overflowY === 'scroll')
+            && chatContainer.scrollHeight > chatContainer.clientHeight + 1;
+        
+        scrollableContainers = chatScrollable ? [chatContainer, ...ancestors] : [...ancestors];
 
-        console.log(`[Better Antigravity] Found ${scrollableContainers.length} scrollable container(s) (1 chat + ${ancestors.length} ancestor(s))`);
+        // If no scrollable ancestors found, still add the first parent with overflow
+        if (scrollableContainers.length === 0) {
+            let current = chatContainer.parentElement;
+            while (current && current !== document.documentElement) {
+                if (current.scrollHeight > current.clientHeight + 1) {
+                    scrollableContainers.push(current);
+                    break;
+                }
+                current = current.parentElement;
+            }
+        }
+
+        console.log(`[Better Antigravity] Tracking ${scrollableContainers.length} scrollable container(s)`);
 
         observer = new MutationObserver(() => {
+            // Re-check scrollable ancestors periodically since they change
+            // as content grows (e.g. a container becomes scrollable after
+            // enough messages are added)
+            const freshAncestors = findScrollableAncestors(chatContainer);
+            if (freshAncestors.length !== ancestors.length) {
+                // New scrollable containers appeared — update listeners
+                for (const container of scrollableContainers) {
+                    container.removeEventListener('scroll', handleManualScroll);
+                }
+                scrollableContainers = chatScrollable ? [chatContainer, ...freshAncestors] : [...freshAncestors];
+                for (const container of scrollableContainers) {
+                    container.addEventListener('scroll', handleManualScroll, { passive: true });
+                }
+            }
+
             scrollToBottom();
         });
 
@@ -136,7 +196,7 @@
      * Watch the whole document body to find it when it appears.
      */
     const rootObserver = new MutationObserver((mutations, obs) => {
-        const found = document.querySelector(CHAT_SELECTOR);
+        const found = findChatContainer();
         if (found && found !== chatContainer) {
             chatContainer = found;
             observeChatContainer();
@@ -157,7 +217,7 @@
     });
 
     // Check if it's already there
-    const initialContainer = document.querySelector(CHAT_SELECTOR);
+    const initialContainer = findChatContainer();
     if (initialContainer) {
         chatContainer = initialContainer;
         observeChatContainer();
