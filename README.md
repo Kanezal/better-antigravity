@@ -50,12 +50,18 @@ On activation the extension will:
 
 ## Install (CLI only)
 
-If you just want the auto-run fix without installing an extension:
+If you just want a quick fix without installing the extension:
 
 ```bash
+# Auto-run fix (terminal execution policy)
 npx better-antigravity auto-run            # apply fix
 npx better-antigravity auto-run --check    # check status
 npx better-antigravity auto-run --revert   # revert to original
+
+# Auto-scroll fix (chat hang during generation)
+npx better-antigravity auto-scroll         # apply fix
+npx better-antigravity auto-scroll --check # check status
+npx better-antigravity auto-scroll --revert # revert to original
 ```
 
 Custom install path (if Antigravity is not in the default location):
@@ -90,6 +96,21 @@ useEffect(() => {
 
 > For the full root cause analysis, pattern matching explanation, and example output, see **[FIXES.md](FIXES.md)**.
 
+### Auto-Scroll Fix
+
+**The problem:** During AI generation, the chat window sometimes **hangs and stops proceeding** if the scroll position isn't at the absolute bottom. You have to manually scroll down to un-stick it.
+
+**Root cause:** The Antigravity chat renderer doesn't auto-scroll to the bottom when new DOM nodes (streamed tokens) are inserted. If the outer or inner scrollable container drifts even a few pixels from the bottom, the generation loop can stall.
+
+**The fix:** A MutationObserver payload is injected into `workbench.html` via a `<script>` tag. The payload:
+- Watches for the `.antigravity-chat-scroll-area` container (handles async load/destroy)
+- Walks up the DOM tree to discover **all** scrollable ancestor containers
+- Pins every scrollable container to the bottom on each mutation
+- Pauses auto-scroll when the user manually scrolls up (>50px from bottom)
+- Uses `requestAnimationFrame` debouncing to prevent layout thrashing
+
+> For the full technical details, see **[FIXES.md](FIXES.md)**.
+
 ### Chat Rename (Extension only)
 
 Rename conversations to custom titles via the [Antigravity SDK](https://www.npmjs.com/package/antigravity-sdk) title proxy. Custom titles override the auto-generated summaries in the sidebar.
@@ -115,7 +136,8 @@ Multiple SDK-based extensions are coordinated automatically -- the original chec
 | Command | Description |
 |---------|-------------|
 | `Better Antigravity: Show Status` | Show extension and fix status |
-| `Better Antigravity: Revert Auto-Run Fix` | Restore original files from backup |
+| `Better Antigravity: Revert Auto-Run Fix` | Restore original auto-run files from backup |
+| `Better Antigravity: Revert Auto-Scroll Fix` | Remove auto-scroll patch and restore workbench.html |
 
 ---
 
@@ -145,10 +167,15 @@ better-antigravity/
 ├── src/
 │   ├── extension.ts       # Extension entry point (thin orchestrator)
 │   ├── auto-run.ts        # Auto-run fix logic (async, no vscode dependency)
+│   ├── auto-scroll.ts     # Auto-scroll fix logic (workbench.html injection)
 │   └── commands.ts        # VS Code command handlers
 ├── fixes/
-│   └── auto-run-fix/
-│       └── patch.js       # Standalone CLI patcher
+│   ├── auto-run-fix/
+│   │   └── patch.js       # Standalone CLI patcher (JS AST regex)
+│   └── auto-scroll-fix/
+│       └── patch.js       # Standalone CLI patcher (HTML injection)
+├── static/
+│   └── payload.js         # Auto-scroll DOM observer (injected into workbench)
 ├── cli.js                 # npx entry point
 ├── build.mjs              # esbuild config
 ├── publish-ovsx.mjs       # Open VSX publish script

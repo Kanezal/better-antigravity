@@ -1,0 +1,31 @@
+Copied sql-wasm.wasm from node_modules\sql.js\dist\sql-wasm.wasm
+Copied sql-wasm.js from node_modules\sql.js\dist\sql-wasm.js
+X [ERROR] Could not resolve "C:\\CodeProjects\\antigravity-sdk\\dist\\index.js" (originally "antigravity-sdk")
+
+    src/extension.ts:10:31:
+      10 Γöé import { AntigravitySDK } from 'antigravity-sdk';
+         Γò╡                                ~~~~~~~~~~~~~~~~~
+
+  The path "antigravity-sdk" was remapped to "C:\\CodeProjects\\antigravity-sdk\\dist\\index.js" using the alias feature, which then couldn't be resolved. Keep in mind that import path aliases are resolved in the current working directory.
+
+C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:1651
+  let error = new Error(text);
+              ^
+
+Error: Build failed with 1 error:
+src/extension.ts:10:31: ERROR: Could not resolve "C:\\CodeProjects\\antigravity-sdk\\dist\\index.js" (originally "antigravity-sdk")
+    at failureErrorWithLog (C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:1651:15)
+    at C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:1059:25
+    at C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:1004:52
+    at buildResponseToResult (C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:1057:7)
+    at C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:1086:16
+    at responseCallbacks.<computed> (C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:704:9)
+    at handleIncomingPacket (C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:764:9)
+    at Socket.readFromStdout (C:\CodeProjects\better-antigravity\node_modules\esbuild\lib\main.js:680:7)
+    at Socket.emit (node:events:508:20)
+    at addChunk (node:internal/streams/readable:564:12) {
+  errors: [Getter/Setter],
+  warnings: [Getter/Setter]
+}
+
+Node.js v25.5.0
