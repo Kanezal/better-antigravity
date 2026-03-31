@@ -223,7 +223,7 @@ export async function patchFile(filePath: string, label: string): Promise<PatchR
         // Build the patch: useEffect that auto-confirms on mount when policy is EAGER.
         // Trailing `;` is required — insertion point is right before `return`, and in
         // minified one-liner code `fn(...)return` is a SyntaxError without it.
-        const patch = `${PATCH_MARKER}${useEffectFn}(()=>{${policyVar}===${enumName}.EAGER&&!${secureVar}&&${confirmFn}(!0)},[]);`;
+        const patch = `;${PATCH_MARKER}${useEffectFn}(()=>{${policyVar}===${enumName}.EAGER&&!${secureVar}&&${confirmFn}(!0)},[]);`;
 
         // Create backup (only if one doesn't exist)
         const backup = filePath + '.ba-backup';

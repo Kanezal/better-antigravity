@@ -264,7 +264,7 @@ function patchFile(filePath, label) {
     if (!analysis) return false;
 
     const { enumAlias, confirmFn, policyVar, secureVar, useEffectAlias, insertAt } = analysis;
-    const patch = `${PATCH_MARKER}${useEffectAlias}(()=>{${policyVar}===${enumAlias}.EAGER&&!${secureVar}&&${confirmFn}(!0)},[]);`;
+    const patch = `;${PATCH_MARKER}${useEffectAlias}(()=>{${policyVar}===${enumAlias}.EAGER&&!${secureVar}&&${confirmFn}(!0)},[]);`;
 
     // Backup (only if one doesn't exist)
     const bak = filePath + '.ba-backup';
