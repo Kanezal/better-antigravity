@@ -236,11 +236,17 @@ function analyzeFile(content, label) {
     }
     console.log(`     useEffect=${useEffectAlias}`);
 
-    // 5. Insertion point: after useCallback closing `])`, then after the `;`
+    // 5. Insertion point: AFTER the `;` that terminates the let/var chain
+    //    In v1.21.6+ the minifier comma-chains ALL declarations into one `let`,
+    //    so the terminating `;` is hundreds of chars after the onChange `])`.
+    //    We must insert AFTER that `;` (between the let statement and `return`).
+    //    In older versions where each declaration ends with its own `;`, the
+    //    first `;` is right after `])` — same logic works in both cases.
     const afterOnChange = content.indexOf('])', insertPos);
     if (afterOnChange === -1) return null;
-    const insertAt = content.indexOf(';', afterOnChange);
-    if (insertAt === -1) return null;
+    const chainSemicolon = content.indexOf(';', afterOnChange);
+    if (chainSemicolon === -1) return null;
+    const insertAt = chainSemicolon + 1; // insert AFTER the ;
 
     return { enumAlias, confirmFn, policyVar, secureVar, useEffectAlias, insertAt };
 }
