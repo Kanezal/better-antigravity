@@ -2,7 +2,7 @@
   "name": "better-antigravity",
   "displayName": "Better Antigravity",
   "description": "Community-driven fixes and improvements for Antigravity IDE — auto-run fix, chat rename, and more",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "publisher": "kanezal",
   "icon": "static/BA-background.png",
   "galleryBanner": {

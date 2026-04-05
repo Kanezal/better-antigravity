@@ -9,6 +9,7 @@
 import * as vscode from 'vscode';
 import { AntigravitySDK, Logger } from 'antigravity-sdk';
 import { autoApply } from './auto-run';
+import { autoApply as applyLinkApproval } from './link-approval';
 import { status, revertAutoRun } from './commands';
 
 let sdk: AntigravitySDK | null = null;
@@ -35,6 +36,23 @@ export async function activate(context: vscode.ExtensionContext) {
     autoApply().then(fixResults => {
         for (const r of fixResults) {
             log(`[auto-run] ${r.label}: ${r.status}${r.bytesAdded ? ` (+${r.bytesAdded}b)` : ''}${r.error ? ` -- ${r.error}` : ''}`);
+            if (r.status === 'version-blocked') {
+                vscode.window.showWarningMessage(
+                    `Better Antigravity: auto-run fix skipped — unsupported AG version. ${r.error}`,
+                );
+            }
+        }
+    });
+
+    // ── Link Approval Fix (async, non-blocking, no prompt) ────────────
+    applyLinkApproval().then(fixResults => {
+        for (const r of fixResults) {
+            log(`[link-approval] ${r.label}: ${r.status}${r.bytesAdded ? ` (+${r.bytesAdded}b)` : ''}${r.error ? ` -- ${r.error}` : ''}`);
+            if (r.status === 'version-blocked') {
+                vscode.window.showWarningMessage(
+                    `Better Antigravity: link-approval fix skipped — unsupported AG version. ${r.error}`,
+                );
+            }
         }
     });
 

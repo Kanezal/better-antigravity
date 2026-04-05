@@ -34,6 +34,65 @@ import * as fsp from 'fs/promises';
 /** Marker comment to identify our patches */
 const PATCH_MARKER = '/*BA:autorun*/';
 
+// ─── Version Gating ─────────────────────────────────────────────────────────
+
+/**
+ * Supported AG app version range (from resources/app/package.json).
+ * Patch is tested on these versions; outside this range it may brick the IDE.
+ */
+const SUPPORTED_MIN: [number, number, number] = [1, 107, 0];
+const SUPPORTED_MAX: [number, number, number] = [1, 199, 0];
+
+function parseVersion(str: string | undefined | null): [number, number, number] | null {
+    const parts = (str || '').split('.').map(Number);
+    return parts.length === 3 && parts.every(n => Number.isFinite(n))
+        ? parts as [number, number, number]
+        : null;
+}
+
+function compareVersions(a: [number, number, number], b: [number, number, number]): number {
+    for (let i = 0; i < 3; i++) {
+        if (a[i] !== b[i]) return a[i] - b[i];
+    }
+    return 0;
+}
+
+export interface VersionCheck {
+    ok: boolean;
+    version: string;
+    ideVersion?: string;
+    reason?: string;
+}
+
+/**
+ * Read AG version from the app root and check if it's within the supported range.
+ */
+export function checkAgVersion(appRoot: string): VersionCheck {
+    try {
+        const pkg = JSON.parse(fs.readFileSync(path.join(appRoot, 'package.json'), 'utf8'));
+        const product = JSON.parse(fs.readFileSync(path.join(appRoot, 'product.json'), 'utf8'));
+        const appVersion: string = pkg.version;
+        const ideVersion: string = product.ideVersion;
+        const parsed = parseVersion(appVersion);
+
+        if (!parsed) {
+            return { ok: false, version: appVersion || 'unknown', ideVersion,
+                reason: 'Could not parse Antigravity version.' };
+        }
+        if (compareVersions(parsed, SUPPORTED_MIN) < 0) {
+            return { ok: false, version: appVersion, ideVersion,
+                reason: `Version ${appVersion} is below minimum supported ${SUPPORTED_MIN.join('.')}.` };
+        }
+        if (compareVersions(parsed, SUPPORTED_MAX) > 0) {
+            return { ok: false, version: appVersion, ideVersion,
+                reason: `Version ${appVersion} exceeds maximum tested ${SUPPORTED_MAX.join('.')}.` };
+        }
+        return { ok: true, version: appVersion, ideVersion };
+    } catch {
+        return { ok: false, version: 'unknown', reason: 'Could not read Antigravity version files.' };
+    }
+}
+
 /**
  * Resolve the Antigravity app root (resources/app directory).
  */
@@ -215,6 +274,9 @@ export async function patchFile(filePath: string, label: string): Promise<PatchR
 
         const analysis = analyzeFile(content);
         if (!analysis) {
+            if (label === 'jetskiAgent-legacy') {
+                return { success: true, label, status: 'skipped' };
+            }
             return { success: false, label, status: 'pattern-not-found' };
         }
 
@@ -262,19 +324,32 @@ export function revertFile(filePath: string, label: string): PatchResult {
 export interface PatchResult {
     success: boolean;
     label: string;
-    status: 'patched' | 'already-patched' | 'pattern-not-found' | 'reverted' | 'no-backup' | 'error';
+    status: 'patched' | 'already-patched' | 'pattern-not-found' | 'skipped' | 'reverted' | 'no-backup' | 'version-blocked' | 'error';
     bytesAdded?: number;
     error?: string;
 }
 
 /**
  * Auto-apply the fix to all target files.
+ * Blocks patching if the AG version is outside the supported range
+ * unless `force` is true.
  *
  * @returns Array of results for each file
  */
-export async function autoApply(): Promise<PatchResult[]> {
+export async function autoApply(force = false): Promise<PatchResult[]> {
     const root = getAppRoot();
     if (!root) return [];
+
+    // Version gate
+    const vc = checkAgVersion(root);
+    if (!vc.ok && !force) {
+        return [{
+            success: false,
+            label: 'version-check',
+            status: 'version-blocked',
+            error: `${vc.reason} Supported: ${SUPPORTED_MIN.join('.')}–${SUPPORTED_MAX.join('.')}. AG: ${vc.version}`,
+        }];
+    }
 
     const files = getTargetFiles(root);
     return Promise.all(files.map(f => patchFile(f.path, f.label)));

@@ -38,7 +38,7 @@ Search for **"Better Antigravity"** in the Extensions panel, or install from [Op
 Manual install:
 
 ```bash
-antigravity --install-extension better-antigravity-0.5.0.vsix --force
+antigravity --install-extension better-antigravity-0.8.0.vsix --force
 ```
 
 On activation the extension will:

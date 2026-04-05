@@ -9,9 +9,10 @@
  * regardless of minified variable names — works across versions.
  * 
  * Usage:
- *   node patch.js          - Apply patch
- *   node patch.js --revert - Restore original files
- *   node patch.js --check  - Check patch status
+ *   node patch.js           - Apply patch
+ *   node patch.js --revert  - Restore original files
+ *   node patch.js --check   - Check patch status
+ *   node patch.js --force   - Apply even if AG version is untested
  * 
  * License: MIT
  */
@@ -19,6 +20,61 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+
+// ─── Version Gating ─────────────────────────────────────────────────────────
+
+/**
+ * Supported AG app version range (from resources/app/package.json).
+ * Patch is tested on these versions; outside this range it may brick the IDE.
+ */
+const SUPPORTED_MIN = [1, 107, 0];
+const SUPPORTED_MAX = [1, 199, 0];
+
+function parseVersion(str) {
+    const parts = (str || '').split('.').map(Number);
+    return parts.length === 3 && parts.every(n => Number.isFinite(n)) ? parts : null;
+}
+
+function compareVersions(a, b) {
+    for (let i = 0; i < 3; i++) {
+        if (a[i] !== b[i]) return a[i] - b[i];
+    }
+    return 0;
+}
+
+function getAgVersions(basePath) {
+    try {
+        const pkg = JSON.parse(fs.readFileSync(path.join(basePath, 'resources', 'app', 'package.json'), 'utf8'));
+        const product = JSON.parse(fs.readFileSync(path.join(basePath, 'resources', 'app', 'product.json'), 'utf8'));
+        return { appVersion: pkg.version, ideVersion: product.ideVersion };
+    } catch { return { appVersion: null, ideVersion: null }; }
+}
+
+/**
+ * Check if the AG version is within the supported range.
+ * Returns { ok, version, reason } — reason is set only when ok=false.
+ */
+function checkVersion(basePath) {
+    const { appVersion, ideVersion } = getAgVersions(basePath);
+    const parsed = parseVersion(appVersion);
+
+    if (!parsed) {
+        return { ok: false, version: appVersion || 'unknown', ideVersion,
+            reason: 'Could not determine Antigravity version.' };
+    }
+
+    if (compareVersions(parsed, SUPPORTED_MIN) < 0) {
+        return { ok: false, version: appVersion, ideVersion,
+            reason: `Version ${appVersion} is below minimum supported ${SUPPORTED_MIN.join('.')}. Patch patterns may not match.` };
+    }
+
+    if (compareVersions(parsed, SUPPORTED_MAX) > 0) {
+        return { ok: false, version: appVersion, ideVersion,
+            reason: `Version ${appVersion} exceeds maximum tested ${SUPPORTED_MAX.join('.')}. Patch may produce invalid JS.` };
+    }
+
+    return { ok: true, version: appVersion, ideVersion };
+}
 
 // ─── Installation Detection ─────────────────────────────────────────────────
 
@@ -195,7 +251,9 @@ function analyzeFile(content, label) {
     const onChangeMatch = onChangeRe.exec(content);
 
     if (!onChangeMatch) {
-        console.log(`  ❌ [${label}] Could not find onChange handler pattern`);
+        if (label !== 'jetskiAgent-legacy') {
+            console.log(`  ❌ [${label}] Could not find onChange handler pattern`);
+        }
         return null;
     }
 
@@ -267,7 +325,13 @@ function patchFile(filePath, label) {
     }
 
     const analysis = analyzeFile(content, label);
-    if (!analysis) return false;
+    if (!analysis) {
+        if (label === 'jetskiAgent-legacy') {
+            console.log(`  ⏭️  [${label}] Skipped — bootstrap stub (jetskiAgent moved to out/jetskiAgent/main.js)`);
+            return true;
+        }
+        return false;
+    }
 
     const { enumAlias, confirmFn, policyVar, secureVar, useEffectAlias, insertAt } = analysis;
     const patch = `${PATCH_MARKER}${useEffectAlias}(()=>{${policyVar}===${enumAlias}.EAGER&&!${secureVar}&&${confirmFn}(!0)},[]);`;
@@ -311,6 +375,8 @@ function checkFile(filePath, label) {
         const analysis = analyzeFile(content, label);
         if (analysis) {
             console.log(`  ⬜ [${label}] NOT PATCHED (patchable)`);
+        } else if (label === 'jetskiAgent-legacy') {
+            console.log(`  ⏭️  [${label}] Skipped — bootstrap stub (jetskiAgent moved to out/jetskiAgent/main.js)`);
         } else {
             console.log(`  ⚠️  [${label}] NOT PATCHED (pattern not found — may be incompatible or already fixed by AG)`);
         }
@@ -321,11 +387,10 @@ function checkFile(filePath, label) {
 // ─── Version Info ───────────────────────────────────────────────────────────
 
 function getVersion(basePath) {
-    try {
-        const pkg = JSON.parse(fs.readFileSync(path.join(basePath, 'resources', 'app', 'package.json'), 'utf8'));
-        const product = JSON.parse(fs.readFileSync(path.join(basePath, 'resources', 'app', 'product.json'), 'utf8'));
-        return `${pkg.version} (IDE ${product.ideVersion})`;
-    } catch { return 'unknown'; }
+    const { appVersion, ideVersion } = getAgVersions(basePath);
+    if (appVersion && ideVersion) return `${appVersion} (IDE ${ideVersion})`;
+    if (appVersion) return appVersion;
+    return 'unknown';
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────────
@@ -333,6 +398,7 @@ function getVersion(basePath) {
 function main() {
     const args = process.argv.slice(2);
     const action = args.includes('--revert') ? 'revert' : args.includes('--check') ? 'check' : 'apply';
+    const force = args.includes('--force');
 
     // Parse --path flag
     let explicitPath = null;
@@ -371,6 +437,22 @@ function main() {
 
     console.log(`\n📍 ${basePath}`);
     console.log(`📦 Version: ${getVersion(basePath)}`);
+
+    // Version gate: block patching on untested AG versions
+    if (action === 'apply') {
+        const vc = checkVersion(basePath);
+        if (!vc.ok) {
+            console.log(`\n⛔ ${vc.reason}`);
+            console.log(`   Supported range: ${SUPPORTED_MIN.join('.')} – ${SUPPORTED_MAX.join('.')}`);
+            if (force) {
+                console.log('   ⚠️  --force specified, proceeding anyway...');
+            } else {
+                console.log('   Use --force to override (at your own risk).');
+                process.exit(1);
+            }
+        }
+    }
+
     console.log('');
 
     const files = [
